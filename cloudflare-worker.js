@@ -52,26 +52,22 @@ async function finmind(url, token) {
 }
 
 async function taiwanQuote(stockId, token) {
-  const url = new URL(`${FINMIND_API}/taiwan_stock_tick_snapshot`);
+  const url = new URL(`${FINMIND_API}/data`);
+  url.searchParams.set("dataset", "TaiwanStockPrice");
   url.searchParams.set("data_id", stockId);
+  url.searchParams.set("start_date", isoDate(10));
   const row = latestRow(await finmind(url, token));
-  const price = row && finiteNumber(row.close, row.deal_price, row.average_price, row.last_price);
+  const price = row && finiteNumber(row.close, row.Close, row.deal_price);
   if (price === null) throw new Error(`${stockId}: price unavailable`);
   return { symbol: `${stockId}.TW`, price, currency: "TWD", marketTime: row.date ?? null };
 }
 
 async function usQuote(token) {
   const url = new URL(`${FINMIND_API}/data`);
-  url.searchParams.set("dataset", "USStockPriceMinute");
+  url.searchParams.set("dataset", "USStockPrice");
   url.searchParams.set("data_id", "NVDA");
-  url.searchParams.set("start_date", isoDate(5));
-  let row = latestRow(await finmind(url, token));
-
-  // Fall back to the daily dataset when the minute feed has no current record.
-  if (!row) {
-    url.searchParams.set("dataset", "USStockPrice");
-    row = latestRow(await finmind(url, token));
-  }
+  url.searchParams.set("start_date", isoDate(10));
+  const row = latestRow(await finmind(url, token));
   const price = row && finiteNumber(row.close, row.Close, row.Adj_Close);
   if (price === null) throw new Error("NVDA: price unavailable");
   return { symbol: "NVDA", price, currency: "USD", marketTime: row.date ?? null };
