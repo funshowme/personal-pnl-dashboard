@@ -1476,7 +1476,10 @@
 
         const boxRect = box.getBoundingClientRect();
         const pxX = (rect.left - boxRect.left) + (closest.x / viewWidth) * rect.width;
-        tooltip.style.left = pxX + "px";
+        // Keep the hover card inside the chart panel so it cannot sit beneath the adjacent panel.
+        const tooltipHalfWidth = tooltip.offsetWidth / 2 + 10;
+        const safeX = Math.max(tooltipHalfWidth, Math.min(pxX, box.clientWidth - tooltipHalfWidth));
+        tooltip.style.left = safeX + "px";
         tooltip.style.top = "30px";
         tooltip.style.opacity = "1";
 
