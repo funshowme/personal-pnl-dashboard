@@ -1114,8 +1114,16 @@
       }
     }
 
+    // The chart DOM is only rebuilt when a new hourly snapshot is added.
+    // This prevents the hover marker from flashing or resetting on each quote refresh.
+    let chartHistorySignature = null;
+
     // High Precision SVG Chart Renderer
     function drawChart() {
+      const signature = history.map(point => `${point.time}:${point.value}`).join("|");
+      if (signature === chartHistorySignature) return;
+      chartHistorySignature = signature;
+
       const box = el("chartBox");
       if (history.length < 2) {
         box.innerHTML = `
