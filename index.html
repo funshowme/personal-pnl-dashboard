@@ -297,7 +297,7 @@
     /* KPI Summary Cards Grid */
     .summary-grid {
       display: grid;
-      grid-template-columns: 1.6fr repeat(4, minmax(150px, 1fr));
+      grid-template-columns: 1.6fr repeat(4, minmax(180px, 1fr));
       gap: 18px;
       margin-bottom: 24px;
     }
@@ -354,13 +354,38 @@
       font-family: var(--font-mono);
       font-size: 26px;
       font-weight: 700;
+      font-variant-numeric: tabular-nums;
       letter-spacing: -0.03em;
       margin-bottom: 8px;
       white-space: nowrap;
     }
 
+    .summary-grid .card:not(.main-pnl) {
+      padding: 20px;
+    }
+
+    .summary-grid .card:not(.main-pnl) .card-value {
+      font-size: clamp(20px, 1.55vw, 26px);
+      letter-spacing: -0.055em;
+    }
+
+    .currency-chip {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 6px;
+      padding: 2px 5px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0;
+      line-height: 1;
+      vertical-align: 1px;
+    }
+
     .card.main-pnl .card-value {
-      font-size: 38px;
+      font-size: clamp(28px, 2.4vw, 38px);
       font-weight: 800;
     }
 
@@ -464,10 +489,29 @@
 
     /* High Precision SVG Chart Container */
     .chart-box {
-      height: 250px;
+      height: 270px;
       width: 100%;
       position: relative;
       margin-top: auto;
+      padding-left: 64px;
+    }
+
+    .chart-y-axis {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 58px;
+      border-right: 1px solid rgba(255, 255, 255, 0.07);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    .chart-y-axis span {
+      position: absolute;
+      right: 8px;
+      transform: translateY(-50%);
+      white-space: nowrap;
     }
 
     .chart-svg {
@@ -480,8 +524,14 @@
 
     .chart-grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; stroke-dasharray: 4 4; }
     .chart-area { fill: url(#chart-gradient); }
-    .chart-line { fill: none; stroke: var(--accent-cyan); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .chart-line { fill: none; stroke: var(--accent-cyan); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
     .chart-dot { fill: var(--accent-cyan); stroke: #ffffff; stroke-width: 1.4; pointer-events: none; }
+    .chart-marker { stroke: #07101d; stroke-width: 1.2; pointer-events: none; }
+    .chart-marker.start { fill: #94a3b8; }
+    .chart-marker.high { fill: var(--up); }
+    .chart-marker.low { fill: var(--down); }
+    .chart-marker.latest { fill: var(--accent-cyan); stroke: #ffffff; stroke-width: 1.5; }
+    .chart-latest-label { fill: var(--text); font-family: var(--font-mono); font-size: 4px; font-weight: 700; paint-order: stroke; stroke: #07101d; stroke-linejoin: round; stroke-width: 1.2px; }
 
     /* Chart Crosshair & Tooltip */
     .chart-crosshair { stroke: rgba(255, 255, 255, 0.25); stroke-width: 1; stroke-dasharray: 2 2; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
@@ -935,7 +985,7 @@
       <!-- Market Value Card -->
       <article class="card">
         <div class="card-top">
-          <span class="card-label">目前總市值</span>
+          <span class="card-label">目前總市值 <b id="valueCurrency" class="currency-chip">TWD</b></span>
           <div class="card-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
@@ -947,7 +997,7 @@
       <!-- Total Cost Card -->
       <article class="card">
         <div class="card-top">
-          <span class="card-label">總投入成本</span>
+          <span class="card-label">總投入成本 <b id="costCurrency" class="currency-chip">TWD</b></span>
           <div class="card-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
           </div>
@@ -959,7 +1009,7 @@
       <!-- Today Change Card -->
       <article class="card">
         <div class="card-top">
-          <span class="card-label">今日資產變動</span>
+          <span class="card-label">今日資產變動 <b id="todayCurrency" class="currency-chip">TWD</b></span>
           <div class="card-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/><path d="m13 6 6 6-6 6"/><path d="M5 7v10"/></svg>
           </div>
@@ -1138,13 +1188,24 @@
     const el = id => document.getElementById(id);
 
     // Format Money helper
-    function fmtMoney(amount, currency = activeCurrency) {
+    function fmtNumber(amount) {
       if (!Number.isFinite(amount)) return "—";
-      const symbol = currency === "USD" ? "$" : "NT$ ";
-      return symbol + new Intl.NumberFormat("en-US", {
+      return new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       }).format(amount);
+    }
+
+    function fmtMoney(amount, currency = activeCurrency) {
+      if (!Number.isFinite(amount)) return "—";
+      const symbol = currency === "USD" ? "$" : "NT$ ";
+      return symbol + fmtNumber(amount);
+    }
+
+    function fmtAxisValue(amount) {
+      if (!Number.isFinite(amount)) return "—";
+      const digits = Math.abs(amount) < 100 ? 2 : Math.abs(amount) < 1000 ? 1 : 0;
+      return new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(amount);
     }
 
     function fmtPercent(val) {
@@ -1192,7 +1253,7 @@
       const info = el("chartRangeInfo");
       const labels = { "24H": "近 24 小時", "7D": "近 7 天", "30D": "近 30 天", "ALL": "全部快照" };
 
-      info.textContent = series.length ? `${labels[chartRange]} · ${series.length} 筆快照` : `${labels[chartRange]} · 尚無快照`;
+      info.textContent = series.length ? `${labels[chartRange]} · ${series.length} 筆快照 · ${activeCurrency} · 局部縮放 Y 軸` : `${labels[chartRange]} · 尚無快照`;
       if (series.length < 2) {
         change.textContent = "—";
         change.className = "chart-stat-value";
@@ -1243,9 +1304,18 @@
       }
 
       const values = series.map(x => x.value * multiplier);
-      const min = Math.min(...values) * 0.995;
-      const max = Math.max(...values) * 1.005;
+      const rawMin = Math.min(...values);
+      const rawMax = Math.max(...values);
+      const rawRange = rawMax - rawMin;
+      // A tight but truthful local scale: 12% padding around actual movement,
+      // with a minimal 0.015% buffer for an almost-flat period.
+      const padding = Math.max(rawRange * 0.12, Math.abs((rawMax + rawMin) / 2) * 0.00015);
+      const min = rawMin - padding;
+      const max = rawMax + padding;
       const range = max - min || 1;
+      const axisMax = fmtAxisValue(max);
+      const axisMid = fmtAxisValue((max + min) / 2);
+      const axisMin = fmtAxisValue(min);
 
       const pts = series.map((h, i) => {
         const value = h.value * multiplier;
@@ -1256,7 +1326,32 @@
 
       const linePoints = pts.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
 
+      const markerMap = new Map();
+      const addMarker = (index, type) => {
+        const types = markerMap.get(index) || [];
+        if (!types.includes(type)) types.push(type);
+        markerMap.set(index, types);
+      };
+      addMarker(0, "start");
+      addMarker(values.indexOf(rawMax), "high");
+      addMarker(values.indexOf(rawMin), "low");
+      addMarker(pts.length - 1, "latest");
+
+      const markerMarkup = [...markerMap.entries()].map(([index, types]) => {
+        const point = pts[index];
+        const radius = types.includes("latest") ? 3.1 : 2.25;
+        return '<circle class="chart-marker ' + types.join(" ") + '" cx="' + point.x + '" cy="' + point.y + '" r="' + radius + '" />';
+      }).join("");
+      const latestPoint = pts.at(-1);
+      const latestLabelY = latestPoint.y < 18 ? Math.min(latestPoint.y + 8, 95) : latestPoint.y - 4;
+      const latestValueLabel = '<text class="chart-latest-label" x="' + Math.max(latestPoint.x - 2, 2) + '" y="' + latestLabelY + '" text-anchor="end">' + fmtMoney(latestPoint.val) + '</text>';
+
       box.innerHTML = `
+        <div class="chart-y-axis" aria-hidden="true">
+          <span style="top:10%">${axisMax}</span>
+          <span style="top:50%">${axisMid}</span>
+          <span style="top:90%">${axisMin}</span>
+        </div>
         <div class="chart-tooltip" id="chartTooltip">
           <div class="tt-date" id="ttDate">--</div>
           <div class="tt-val" id="ttVal">--</div>
@@ -1264,16 +1359,17 @@
         <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
           <defs>
             <linearGradient id="chart-gradient" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.35"/>
+              <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.38"/>
               <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0"/>
             </linearGradient>
           </defs>
-          <line class="chart-grid" x1="0" y1="20" x2="100" y2="20" />
+          <line class="chart-grid" x1="0" y1="10" x2="100" y2="10" />
           <line class="chart-grid" x1="0" y1="50" x2="100" y2="50" />
-          <line class="chart-grid" x1="0" y1="80" x2="100" y2="80" />
-          
+          <line class="chart-grid" x1="0" y1="90" x2="100" y2="90" />
           <polygon class="chart-area" points="0,100 ${linePoints} 100,100" />
           <polyline class="chart-line" points="${linePoints}" />
+          ${markerMarkup}
+          ${latestValueLabel}
           <circle id="chartHoverDot" class="chart-dot" cx="-10" cy="-10" r="2.6" />
           <line id="chartCrosshair" class="chart-crosshair" x1="0" y1="0" x2="0" y2="100" />
         </svg>`;
@@ -1285,7 +1381,7 @@
       const crosshair = el("chartCrosshair");
 
       box.onmousemove = (e) => {
-        const rect = box.getBoundingClientRect();
+        const rect = svg.getBoundingClientRect();
         const mouseX = ((e.clientX - rect.left) / rect.width) * 100;
         
         // Find nearest point
@@ -1305,7 +1401,8 @@
         crosshair.setAttribute("x2", closest.x);
         crosshair.style.opacity = "1";
 
-        const pxX = (closest.x / 100) * rect.width;
+        const boxRect = box.getBoundingClientRect();
+        const pxX = (rect.left - boxRect.left) + (closest.x / 100) * rect.width;
         tooltip.style.left = pxX + "px";
         tooltip.style.top = "30px";
         tooltip.style.opacity = "1";
@@ -1350,6 +1447,7 @@
       const multCurr = activeCurrency === "USD" ? (1 / exchange) : 1;
       const displayTotalCost = totalCostTwd * multCurr;
       const displayTotalValue = totalValueTwd * multCurr;
+      document.querySelectorAll(".currency-chip").forEach(chip => { chip.textContent = activeCurrency; });
       const pnlAmount = displayTotalValue - displayTotalCost;
       const pnlRate = totalCostTwd ? (totalValueTwd - totalCostTwd) / totalCostTwd * 100 : 0;
 
@@ -1365,8 +1463,8 @@
         pnlBadge.className = "trend-badge " + (pnlRate >= 0 ? "up" : "down");
 
         el("totalRateSub").textContent = `極致總報酬率 · ${pnlRate >= 0 ? '獲利' : '虧損'}`;
-        el("totalValue").textContent = fmtMoney(displayTotalValue);
-        el("totalCost").textContent = fmtMoney(displayTotalCost);
+        el("totalValue").textContent = fmtNumber(displayTotalValue);
+        el("totalCost").textContent = fmtNumber(displayTotalCost);
         el("totalValueSub").textContent = `計價幣別: ${activeCurrency}`;
       }
 
@@ -1378,7 +1476,7 @@
       if (todaySnapshots.length >= 2 && totalValueTwd > 0) {
         const baseline = todaySnapshots[0].value * multCurr;
         const change = displayTotalValue - baseline;
-        todayChange.textContent = (change >= 0 ? "+" : "") + fmtMoney(change);
+        todayChange.textContent = (change >= 0 ? "+" : "") + fmtNumber(change);
         todayChange.className = "card-value " + (change >= 0 ? "up" : "down");
         todayChangeSub.textContent = "與今日首筆快照相比";
       } else {
