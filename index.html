@@ -489,16 +489,16 @@
 
     /* High Precision SVG Chart Container */
     .chart-box {
-      height: 270px;
+      height: 294px;
       width: 100%;
       position: relative;
       margin-top: auto;
-      padding-left: 64px;
+      padding: 0 0 24px 64px;
     }
 
     .chart-y-axis {
       position: absolute;
-      inset: 0 auto 0 0;
+      inset: 0 auto 24px 0;
       width: 58px;
       border-right: 1px solid rgba(255, 255, 255, 0.07);
       color: var(--text-dim);
@@ -513,6 +513,29 @@
       transform: translateY(-50%);
       white-space: nowrap;
     }
+
+    .chart-x-axis {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 64px;
+      height: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    .chart-x-axis span {
+      position: absolute;
+      top: 5px;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    .chart-x-axis .axis-start { transform: none; }
+    .chart-x-axis .axis-end { transform: translateX(-100%); }
 
     .chart-svg {
       width: 100%;
@@ -1285,15 +1308,19 @@
 
     // High Precision SVG Chart Renderer
     function drawChart() {
+      const box = el("chartBox");
       const series = getChartHistory();
       const exchange = getQuotePrice("USDTWD=X") || 32.8;
       const multiplier = activeCurrency === "USD" ? 1 / exchange : 1;
-      const signature = `${chartRange}:${activeCurrency}:${exchange.toFixed(4)}:` + series.map(point => `${point.time}:${point.value}`).join("|");
+      const plotWidth = Math.max(box.clientWidth - 64, 1);
+      const plotHeight = Math.max(box.clientHeight - 24, 1);
+      // Match the SVG viewBox aspect ratio to its rendered rectangle, keeping text and circles proportional.
+      const viewWidth = (plotWidth / plotHeight) * 100;
+      const signature = `${chartRange}:${activeCurrency}:${exchange.toFixed(4)}:${Math.round(plotWidth)}x${Math.round(plotHeight)}:` + series.map(point => `${point.time}:${point.value}`).join("|");
       if (signature === chartHistorySignature) return;
       chartHistorySignature = signature;
 
       updateChartStats(series, multiplier);
-      const box = el("chartBox");
       if (series.length < 2) {
         box.innerHTML = `
           <div class="chart-empty">
@@ -1319,7 +1346,7 @@
 
       const pts = series.map((h, i) => {
         const value = h.value * multiplier;
-        const x = (i / (series.length - 1)) * 100;
+        const x = (i / (series.length - 1)) * viewWidth;
         const y = 90 - ((value - min) / range) * 80;
         return { x, y, val: value, time: h.time };
       });
@@ -1345,6 +1372,19 @@
       const latestPoint = pts.at(-1);
       const latestLabelY = latestPoint.y < 18 ? Math.min(latestPoint.y + 8, 95) : latestPoint.y - 4;
       const latestValueLabel = '<text class="chart-latest-label" x="' + Math.max(latestPoint.x - 2, 2) + '" y="' + latestLabelY + '" text-anchor="end">' + fmtMoney(latestPoint.val) + '</text>';
+      const tickCount = Math.min(series.length, 4);
+      const tickIndexes = [...new Set(Array.from({ length: tickCount }, (_, index) => Math.round(index * (series.length - 1) / Math.max(tickCount - 1, 1))))];
+      const formatTick = time => {
+        const date = new Date(time);
+        const datePart = `${date.getMonth() + 1}/${date.getDate()}`;
+        const timePart = date.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
+        return chartRange === "24H" ? timePart : `${datePart} ${timePart}`;
+      };
+      const xAxisMarkup = tickIndexes.map((index, position) => {
+        const point = pts[index];
+        const edgeClass = position === 0 ? "axis-start" : position === tickIndexes.length - 1 ? "axis-end" : "";
+        return '<span class="' + edgeClass + '" style="left:' + (point.x / viewWidth) * 100 + '%">' + formatTick(point.time) + '</span>';
+      }).join("");
 
       box.innerHTML = `
         <div class="chart-y-axis" aria-hidden="true">
@@ -1356,23 +1396,24 @@
           <div class="tt-date" id="ttDate">--</div>
           <div class="tt-val" id="ttVal">--</div>
         </div>
-        <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <svg class="chart-svg" viewBox="0 0 ${viewWidth} 100">
           <defs>
             <linearGradient id="chart-gradient" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.38"/>
               <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.0"/>
             </linearGradient>
           </defs>
-          <line class="chart-grid" x1="0" y1="10" x2="100" y2="10" />
-          <line class="chart-grid" x1="0" y1="50" x2="100" y2="50" />
-          <line class="chart-grid" x1="0" y1="90" x2="100" y2="90" />
-          <polygon class="chart-area" points="0,100 ${linePoints} 100,100" />
+          <line class="chart-grid" x1="0" y1="10" x2="${viewWidth}" y2="10" />
+          <line class="chart-grid" x1="0" y1="50" x2="${viewWidth}" y2="50" />
+          <line class="chart-grid" x1="0" y1="90" x2="${viewWidth}" y2="90" />
+          <polygon class="chart-area" points="0,100 ${linePoints} ${viewWidth},100" />
           <polyline class="chart-line" points="${linePoints}" />
           ${markerMarkup}
           ${latestValueLabel}
           <circle id="chartHoverDot" class="chart-dot" cx="-10" cy="-10" r="2.6" />
           <line id="chartCrosshair" class="chart-crosshair" x1="0" y1="0" x2="0" y2="100" />
-        </svg>`;
+        </svg>
+        <div class="chart-x-axis" aria-hidden="true">${xAxisMarkup}</div>`;
 
       // Add Mouseover Crosshair Interaction
       const svg = box.querySelector("svg");
@@ -1382,7 +1423,7 @@
 
       box.onmousemove = (e) => {
         const rect = svg.getBoundingClientRect();
-        const mouseX = ((e.clientX - rect.left) / rect.width) * 100;
+        const mouseX = ((e.clientX - rect.left) / rect.width) * viewWidth;
         
         // Find nearest point
         let closest = pts[0];
@@ -1402,7 +1443,7 @@
         crosshair.style.opacity = "1";
 
         const boxRect = box.getBoundingClientRect();
-        const pxX = (rect.left - boxRect.left) + (closest.x / 100) * rect.width;
+        const pxX = (rect.left - boxRect.left) + (closest.x / viewWidth) * rect.width;
         tooltip.style.left = pxX + "px";
         tooltip.style.top = "30px";
         tooltip.style.opacity = "1";
@@ -1640,6 +1681,12 @@
 
     // Initialization
     el("refreshBtn").addEventListener("click", updateQuotes);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => {
+        chartHistorySignature = null;
+        drawChart();
+      }).observe(el("chartBox"));
+    }
     render();
     updateQuotes();
     setInterval(updateQuotes, 60000); // Refresh every 60s
