@@ -949,6 +949,31 @@
       .header-actions { width: 100%; justify-content: space-between; }
       .allocation-body { grid-template-columns: 1fr; }
       .chart-stats { grid-template-columns: 1fr; }
+
+      .panel-header {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .panel-title {
+        font-size: 18px;
+        white-space: nowrap;
+      }
+
+      .time-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .time-tab {
+        min-width: 0;
+        padding: 8px 4px;
+        white-space: nowrap;
+      }
+
+      .chart-x-axis { font-size: 9px; }
     }
   </style>
 </head>
@@ -1370,20 +1395,27 @@
         return '<circle class="chart-marker ' + types.join(" ") + '" cx="' + point.x + '" cy="' + point.y + '" r="' + radius + '" />';
       }).join("");
       const latestPoint = pts.at(-1);
+      const isMobile = window.matchMedia("(max-width: 640px)").matches;
       const latestLabelY = latestPoint.y < 18 ? Math.min(latestPoint.y + 8, 95) : latestPoint.y - 4;
-      const latestValueLabel = '<text class="chart-latest-label" x="' + Math.max(latestPoint.x - 2, 2) + '" y="' + latestLabelY + '" text-anchor="end">' + fmtMoney(latestPoint.val) + '</text>';
-      const tickCount = Math.min(series.length, 4);
+      const latestValueLabel = isMobile
+        ? '<text class="chart-latest-label" x="3" y="14" text-anchor="start">' + fmtMoney(latestPoint.val) + '</text>'
+        : '<text class="chart-latest-label" x="' + Math.max(latestPoint.x - 2, 2) + '" y="' + latestLabelY + '" text-anchor="end">' + fmtMoney(latestPoint.val) + '</text>';
+      const tickCount = Math.min(series.length, isMobile ? 2 : 4);
       const tickIndexes = [...new Set(Array.from({ length: tickCount }, (_, index) => Math.round(index * (series.length - 1) / Math.max(tickCount - 1, 1))))];
-      const formatTick = time => {
+      const firstTickDate = new Date(series[0].time);
+      const formatTick = (time, position) => {
         const date = new Date(time);
         const datePart = `${date.getMonth() + 1}/${date.getDate()}`;
         const timePart = date.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
-        return chartRange === "24H" ? timePart : `${datePart} ${timePart}`;
+        if (!isMobile) return chartRange === "24H" ? timePart : `${datePart} ${timePart}`;
+        if (chartRange !== "24H") return datePart;
+        const sameDay = date.toDateString() === firstTickDate.toDateString();
+        return position > 0 && sameDay ? timePart : `${datePart} ${timePart}`;
       };
       const xAxisMarkup = tickIndexes.map((index, position) => {
         const point = pts[index];
         const edgeClass = position === 0 ? "axis-start" : position === tickIndexes.length - 1 ? "axis-end" : "";
-        return '<span class="' + edgeClass + '" style="left:' + (point.x / viewWidth) * 100 + '%">' + formatTick(point.time) + '</span>';
+        return '<span class="' + edgeClass + '" style="left:' + (point.x / viewWidth) * 100 + '%">' + formatTick(point.time, position) + '</span>';
       }).join("");
 
       box.innerHTML = `
