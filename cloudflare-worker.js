@@ -1,5 +1,5 @@
 const ALLOWED_ORIGIN = "https://funshowme.github.io";
-const CACHE_SECONDS = 300;
+const CACHE_SECONDS = 60;
 const YAHOO_ORIGIN = "https://query1.finance.yahoo.com";
 const QUOTES = [
   { symbol: "2327.TW", currency: "TWD" },
