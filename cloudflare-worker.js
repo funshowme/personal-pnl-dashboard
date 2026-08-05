@@ -1,6 +1,12 @@
 const ALLOWED_ORIGIN = "https://funshowme.github.io";
 const CACHE_SECONDS = 300;
-const FINMIND_API = "https://api.finmindtrade.com/api/v4";
+const YAHOO_ORIGIN = "https://query1.finance.yahoo.com";
+const QUOTES = [
+  { symbol: "2327.TW", currency: "TWD" },
+  { symbol: "0050.TW", currency: "TWD" },
+  { symbol: "NVDA", currency: "USD" },
+  { symbol: "USDTWD=X", currency: "TWD" },
+];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -9,108 +15,71 @@ const corsHeaders = {
   "Vary": "Origin",
 };
 
-function json(body, status = 200, extraHeaders = {}) {
+function json(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...corsHeaders,
-      ...extraHeaders,
-    },
+    headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders, ...headers },
   });
 }
 
-function isoDate(daysAgo = 0) {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() - daysAgo);
-  return date.toISOString().slice(0, 10);
-}
-
-function latestRow(rows) {
-  return Array.isArray(rows) && rows.length
-    ? [...rows].sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? ""))).at(-1)
-    : null;
-}
-
-function finiteNumber(...values) {
-  for (const value of values) {
-    const number = Number(value);
-    if (Number.isFinite(number)) return number;
+function latestClose(result) {
+  const closes = result?.indicators?.quote?.[0]?.close ?? [];
+  for (let index = closes.length - 1; index >= 0; index -= 1) {
+    const price = Number(closes[index]);
+    if (Number.isFinite(price)) return price;
   }
   return null;
 }
 
-async function finmind(url, token) {
+async function yahooQuote(item) {
+  const url = new URL(`/v8/finance/chart/${encodeURIComponent(item.symbol)}`, YAHOO_ORIGIN);
+  url.searchParams.set("range", "1d");
+  url.searchParams.set("interval", "1m");
+  url.searchParams.set("events", "history");
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    headers: {
+      "Accept": "application/json, text/plain, */*",
+      "Referer": "https://finance.yahoo.com/",
+      "User-Agent": "Mozilla/5.0 (compatible; PersonalPnLDashboard/1.0)",
+    },
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok || payload.status === 402 || payload.status === 401) {
-    throw new Error(payload.msg || `FinMind request failed (${response.status})`);
+  const result = payload.chart?.result?.[0];
+  const price = Number(result?.meta?.regularMarketPrice);
+  const finalPrice = Number.isFinite(price) ? price : latestClose(result);
+  if (!response.ok || !Number.isFinite(finalPrice)) {
+    throw new Error(`${item.symbol}: Yahoo Finance returned no usable price (${response.status})`);
   }
-  return payload.data ?? [];
-}
-
-async function taiwanQuote(stockId, token) {
-  const url = new URL(`${FINMIND_API}/data`);
-  url.searchParams.set("dataset", "TaiwanStockPrice");
-  url.searchParams.set("data_id", stockId);
-  url.searchParams.set("start_date", isoDate(10));
-  const row = latestRow(await finmind(url, token));
-  const price = row && finiteNumber(row.close, row.Close, row.deal_price);
-  if (price === null) throw new Error(`${stockId}: price unavailable`);
-  return { symbol: `${stockId}.TW`, price, currency: "TWD", marketTime: row.date ?? null };
-}
-
-async function usQuote(token) {
-  const url = new URL(`${FINMIND_API}/data`);
-  url.searchParams.set("dataset", "USStockPrice");
-  url.searchParams.set("data_id", "NVDA");
-  url.searchParams.set("start_date", isoDate(10));
-  const row = latestRow(await finmind(url, token));
-  const price = row && finiteNumber(row.close, row.Close, row.Adj_Close);
-  if (price === null) throw new Error("NVDA: price unavailable");
-  return { symbol: "NVDA", price, currency: "USD", marketTime: row.date ?? null };
-}
-
-async function usdTwdQuote(token) {
-  const url = new URL(`${FINMIND_API}/data`);
-  url.searchParams.set("dataset", "TaiwanExchangeRate");
-  url.searchParams.set("data_id", "USD");
-  url.searchParams.set("start_date", isoDate(10));
-  const row = latestRow(await finmind(url, token));
-  const buy = row && finiteNumber(row.spot_buy, row.cash_buy, row.buy, row.rate);
-  const sell = row && finiteNumber(row.spot_sell, row.cash_sell, row.sell);
-  const price = buy !== null && sell !== null ? (buy + sell) / 2 : buy;
-  if (price === null) throw new Error("USD/TWD: price unavailable");
-  return { symbol: "USDTWD=X", price, currency: "TWD", marketTime: row.date ?? null };
+  const time = Number(result?.meta?.regularMarketTime);
+  return {
+    symbol: item.symbol,
+    price: finalPrice,
+    currency: item.currency,
+    marketTime: Number.isFinite(time) ? new Date(time * 1000).toISOString() : null,
+  };
 }
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, _env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     if (origin && origin !== ALLOWED_ORIGIN) return json({ error: "Origin not allowed" }, 403);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
-    if (request.method !== "GET" || url.pathname !== "/quotes") {
-      return json({ error: "Use GET /quotes" }, 404);
-    }
-    if (!env.FINMIND_TOKEN) return json({ error: "Server configuration is incomplete" }, 500);
+    if (request.method !== "GET" || url.pathname !== "/quotes") return json({ error: "Use GET /quotes" }, 404);
 
     const cache = caches.default;
     const cached = await cache.match(request);
     if (cached) return cached;
 
-    const tasks = [taiwanQuote("2327", env.FINMIND_TOKEN), taiwanQuote("0050", env.FINMIND_TOKEN), usQuote(env.FINMIND_TOKEN), usdTwdQuote(env.FINMIND_TOKEN)];
-    const settled = await Promise.allSettled(tasks);
-    const data = settled.filter((result) => result.status === "fulfilled").map((result) => result.value);
-    const errors = settled.filter((result) => result.status === "rejected").map((result) => result.reason.message);
+    const settled = await Promise.allSettled(QUOTES.map(yahooQuote));
+    const data = settled.filter(result => result.status === "fulfilled").map(result => result.value);
+    const errors = settled.filter(result => result.status === "rejected").map(result => result.reason.message);
     const response = json(
-      { data, errors, updatedAt: new Date().toISOString(), source: "FinMind" },
+      { data, errors, updatedAt: new Date().toISOString(), source: "Yahoo Finance" },
       data.length ? 200 : 502,
       { "Cache-Control": `public, max-age=${CACHE_SECONDS}` },
     );
-    ctx.waitUntil(cache.put(request, response.clone()));
+    if (data.length) ctx.waitUntil(cache.put(request, response.clone()));
     return response;
   },
 };
