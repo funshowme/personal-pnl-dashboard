@@ -12,7 +12,10 @@
   <style>
     :root {
       --bg: #070a12;
-      --bg-radial: radial-gradient(circle at 50% 0%, #152238 0%, #070a12 70%);
+      --bg-radial: radial-gradient(circle at 86% 0%, rgba(59, 130, 246, 0.16) 0%, transparent 32%),
+        radial-gradient(circle at 8% 58%, rgba(99, 102, 241, 0.11) 0%, transparent 30%),
+        radial-gradient(circle at 60% 100%, rgba(16, 185, 129, 0.07) 0%, transparent 28%),
+        #070a12;
       --surface: #0e1526;
       --surface-glass: rgba(15, 23, 42, 0.65);
       --surface-hover: #141f36;
@@ -69,19 +72,6 @@
       padding-bottom: 50px;
       overflow-x: hidden;
     }
-
-    /* Ambient Background Light Orbs */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(120px);
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.35;
-    }
-    .orb-1 { top: -100px; right: -100px; width: 500px; height: 500px; background: #3b82f6; }
-    .orb-2 { top: 40%; left: -150px; width: 600px; height: 600px; background: #6366f1; }
-    .orb-3 { bottom: -100px; right: 20%; width: 450px; height: 450px; background: #10b981; }
 
     .wrap {
       max-width: 1280px;
@@ -483,13 +473,15 @@
     .chart-svg {
       width: 100%;
       height: 100%;
-      overflow: visible;
+      display: block;
+      overflow: hidden;
+      isolation: isolate;
     }
 
     .chart-grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; stroke-dasharray: 4 4; }
     .chart-area { fill: url(#chart-gradient); }
-    .chart-line { fill: none; stroke: var(--accent-cyan); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 4px 12px rgba(6, 182, 212, 0.4)); }
-    .chart-dot { fill: var(--accent-cyan); stroke: #ffffff; stroke-width: 2.5; r: 5; filter: drop-shadow(0 0 8px var(--accent-cyan)); transition: all 0.15s; }
+    .chart-line { fill: none; stroke: var(--accent-cyan); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+    .chart-dot { fill: var(--accent-cyan); stroke: #ffffff; stroke-width: 1.4; pointer-events: none; }
 
     /* Chart Crosshair & Tooltip */
     .chart-crosshair { stroke: rgba(255, 255, 255, 0.25); stroke-width: 1; stroke-dasharray: 2 2; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
@@ -808,103 +800,6 @@
       color: var(--text-muted);
     }
 
-    .action-btn-sm {
-      background: transparent;
-      border: none;
-      color: var(--text-dim);
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .action-btn-sm:hover {
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Modal Styling */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(8px);
-      z-index: 100;
-      display: grid;
-      place-items: center;
-      padding: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease;
-    }
-
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .modal-card {
-      background: #0e1626;
-      border: 1px solid var(--border-accent);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.2);
-      border-radius: var(--radius-xl);
-      width: min(480px, 100%);
-      padding: 28px;
-      transform: translateY(20px);
-      transition: transform 0.25s ease;
-    }
-
-    .modal-overlay.open .modal-card {
-      transform: translateY(0);
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .modal-title { font-size: 18px; font-weight: 800; color: var(--text); }
-    .modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; }
-
-    .form-group {
-      margin-bottom: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
-    .form-control {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 10px 14px;
-      color: var(--text);
-      font-family: var(--font-main);
-      font-size: 14px;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 24px;
-    }
-
     /* Notice & Footer */
     .disclaimer-banner {
       margin-top: 24px;
@@ -941,11 +836,6 @@
   </style>
 </head>
 <body>
-  <!-- Ambient Orbs -->
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-
   <div class="wrap">
     <!-- Header -->
     <header class="hero">
@@ -977,11 +867,6 @@
           <button id="currUsd" class="toggle-opt" onclick="setCurrency('USD')">USD</button>
         </div>
 
-        <!-- Add Holding Button -->
-        <button class="btn" onclick="openHoldingModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          新增持倉
-        </button>
 
         <!-- Refresh Button -->
         <button id="refreshBtn" class="btn btn-primary">
@@ -1140,7 +1025,6 @@
               <th>目前市值</th>
               <th>未實現損益</th>
               <th>報酬率 %</th>
-              <th>操作</th>
             </tr>
           </thead>
           <tbody id="holdingsTbody">
@@ -1153,7 +1037,7 @@
     <!-- Disclaimer Banner -->
     <div class="disclaimer-banner">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span>行情資料來源：Yahoo Finance API (經由 Cloudflare Worker 代理)。系統每 60 秒自動檢查並更新報價；歷史快照最多儲存 90 筆紀錄於本機 LocalStorage。估算數據不包含交易手續費與稅金。</span>
+      <span>行情資料來源：Yahoo Finance API（經由 Cloudflare Worker 代理）。本頁為唯讀展示，持倉資料僅由網站擁有者維護；系統每 60 秒自動檢查並更新報價。歷史快照最多儲存 90 筆紀錄於本機 LocalStorage；估算數據不包含交易手續費與稅金。</span>
     </div>
 
     <footer>
@@ -1161,62 +1045,6 @@
     </footer>
   </div>
 
-  <!-- Add/Edit Holding Modal -->
-  <div id="holdingModal" class="modal-overlay">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title" id="modalTitle">新增持倉標的</div>
-        <button class="modal-close" onclick="closeHoldingModal()">&times;</button>
-      </div>
-      <form id="holdingForm" onsubmit="saveHolding(event)">
-        <input type="hidden" id="editIndex" value="-1">
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">市場別</label>
-            <select id="modalMarket" class="form-control" onchange="autoFillCurrency()">
-              <option value="TW">台股 (TW)</option>
-              <option value="US">美股 (US)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Yahoo 報價代碼 (Symbol)</label>
-            <input type="text" id="modalSymbol" class="form-control" placeholder="例: 2330.TW 或 AAPL" required>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">顯示代號</label>
-            <input type="text" id="modalDisplay" class="form-control" placeholder="例: 2330" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">公司/標的名稱</label>
-            <input type="text" id="modalName" class="form-control" placeholder="例: 台積電" required>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">持有股數 (Shares)</label>
-            <input type="number" step="any" id="modalShares" class="form-control" placeholder="例: 1000" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">買入平均成本 (Cost)</label>
-            <input type="number" step="any" id="modalCost" class="form-control" placeholder="例: 950" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">計價幣別</label>
-          <select id="modalCurrency" class="form-control">
-            <option value="TWD">新台幣 (TWD)</option>
-            <option value="USD">美元 (USD)</option>
-          </select>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeHoldingModal()">取消</button>
-          <button type="submit" class="btn btn-primary">儲存持倉</button>
-        </div>
-      </form>
-    </div>
-  </div>
 
   <script>
     // Configuration & Constants
@@ -1229,10 +1057,10 @@
 
     const QUOTES_KEY = "personal-pnl-quotes-v3";
     const HISTORY_KEY = "personal-pnl-history-v3";
-    const HOLDINGS_KEY = "personal-pnl-holdings-v3";
 
-    // Application State
-    let holdings = JSON.parse(localStorage.getItem(HOLDINGS_KEY) || JSON.stringify(DEFAULT_HOLDINGS));
+    // Public dashboard: holdings are read-only and always come from this source file.
+    // Quote cache and chart snapshots remain local to improve loading and chart continuity.
+    const holdings = Object.freeze(DEFAULT_HOLDINGS.map(holding => Object.freeze({ ...holding })));
     let quotes = JSON.parse(localStorage.getItem(QUOTES_KEY) || "{}");
     let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
     let prevQuotes = {};
@@ -1262,9 +1090,6 @@
       return Number(quotes[sym]?.price);
     }
 
-    function saveHoldingsStorage() {
-      localStorage.setItem(HOLDINGS_KEY, JSON.stringify(holdings));
-    }
 
     function setCurrency(curr) {
       activeCurrency = curr;
@@ -1332,7 +1157,7 @@
           
           <polygon class="chart-area" points="0,100 ${linePoints} 100,100" />
           <polyline class="chart-line" points="${linePoints}" />
-          <circle id="chartHoverDot" class="chart-dot" cx="-10" cy="-10" />
+          <circle id="chartHoverDot" class="chart-dot" cx="-10" cy="-10" r="2.6" />
           <line id="chartCrosshair" class="chart-crosshair" x1="0" y1="0" x2="0" y2="100" />
         </svg>`;
 
@@ -1457,8 +1282,7 @@
       const search = el("searchInput").value.toLowerCase();
       const multCurr = activeCurrency === "USD" ? (1 / exchange) : 1;
 
-      const filtered = holdings.filter((h, idx) => {
-        h._idx = idx;
+      const filtered = holdings.filter(h => {
         const matchesSearch = h.display.toLowerCase().includes(search) || h.name.toLowerCase().includes(search) || h.symbol.toLowerCase().includes(search);
         
         const now = getQuotePrice(h.symbol);
@@ -1474,7 +1298,7 @@
 
       const tbody = el("holdingsTbody");
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">無符合條件的持倉標的</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">無符合條件的持倉標的</td></tr>`;
         return;
       }
 
@@ -1520,14 +1344,6 @@
                 ${Number.isFinite(pnlRate) ? fmtPercent(pnlRate) : "—"}
               </span>
             </td>
-            <td>
-              <button class="action-btn-sm" title="編輯持倉" onclick="editHolding(${h._idx})">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              </button>
-              <button class="action-btn-sm" title="刪除持倉" onclick="deleteHolding(${h._idx})">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            </td>
           </tr>`;
       }).join("");
     }
@@ -1569,70 +1385,6 @@
       } finally {
         btn.disabled = false;
         icon.style.animation = "none";
-        render();
-      }
-    }
-
-    // Modal Operations
-    function openHoldingModal() {
-      el("editIndex").value = "-1";
-      el("modalTitle").textContent = "新增持倉標的";
-      el("holdingForm").reset();
-      autoFillCurrency();
-      el("holdingModal").classList.add("open");
-    }
-
-    function closeHoldingModal() {
-      el("holdingModal").classList.remove("open");
-    }
-
-    function autoFillCurrency() {
-      const mkt = el("modalMarket").value;
-      el("modalCurrency").value = mkt === "US" ? "USD" : "TWD";
-    }
-
-    function editHolding(idx) {
-      const h = holdings[idx];
-      el("editIndex").value = idx;
-      el("modalTitle").textContent = "編輯持倉標的";
-      el("modalMarket").value = h.market;
-      el("modalSymbol").value = h.symbol;
-      el("modalDisplay").value = h.display;
-      el("modalName").value = h.name;
-      el("modalShares").value = h.shares;
-      el("modalCost").value = h.cost;
-      el("modalCurrency").value = h.currency;
-      el("holdingModal").classList.add("open");
-    }
-
-    function saveHolding(e) {
-      e.preventDefault();
-      const idx = parseInt(el("editIndex").value);
-      const newHolding = {
-        market: el("modalMarket").value,
-        symbol: el("modalSymbol").value.trim(),
-        display: el("modalDisplay").value.trim(),
-        name: el("modalName").value.trim(),
-        shares: parseFloat(el("modalShares").value),
-        cost: parseFloat(el("modalCost").value),
-        currency: el("modalCurrency").value
-      };
-
-      if (idx >= 0) {
-        holdings[idx] = newHolding;
-      } else {
-        holdings.push(newHolding);
-      }
-
-      saveHoldingsStorage();
-      closeHoldingModal();
-      updateQuotes();
-    }
-
-    function deleteHolding(idx) {
-      if (confirm(`確定要移除 ${holdings[idx].display} (${holdings[idx].name}) 持倉？`)) {
-        holdings.splice(idx, 1);
-        saveHoldingsStorage();
         render();
       }
     }
