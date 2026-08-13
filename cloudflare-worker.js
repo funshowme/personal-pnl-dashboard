@@ -31,6 +31,15 @@ function latestClose(result) {
   return null;
 }
 
+function finiteNumber(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") continue;
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return null;
+}
+
 async function yahooQuote(item) {
   const url = new URL(`/v8/finance/chart/${encodeURIComponent(item.symbol)}`, YAHOO_ORIGIN);
   url.searchParams.set("range", "1d");
@@ -45,15 +54,18 @@ async function yahooQuote(item) {
   });
   const payload = await response.json().catch(() => ({}));
   const result = payload.chart?.result?.[0];
-  const price = Number(result?.meta?.regularMarketPrice);
+  const meta = result?.meta;
+  const price = Number(meta?.regularMarketPrice);
   const finalPrice = Number.isFinite(price) ? price : latestClose(result);
   if (!response.ok || !Number.isFinite(finalPrice)) {
     throw new Error(`${item.symbol}: Yahoo Finance returned no usable price (${response.status})`);
   }
-  const time = Number(result?.meta?.regularMarketTime);
+  const previousClose = finiteNumber(meta?.chartPreviousClose, meta?.previousClose);
+  const time = Number(meta?.regularMarketTime);
   return {
     symbol: item.symbol,
     price: finalPrice,
+    previousClose,
     currency: item.currency,
     marketTime: Number.isFinite(time) ? new Date(time * 1000).toISOString() : null,
   };

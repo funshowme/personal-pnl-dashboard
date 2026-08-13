@@ -1063,7 +1063,7 @@
           </div>
         </div>
         <div id="todayChange" class="card-value">--</div>
-        <div class="card-subtext" id="todayChangeSub">累積今日快照後顯示</div>
+        <div class="card-subtext" id="todayChangeSub">等待前一交易日收盤資料</div>
       </article>
 
       <!-- FX Exchange Rate Card -->
@@ -1219,7 +1219,7 @@
       { market: "US", symbol: "NVDA", display: "NVDA", name: "NVIDIA", shares: 0.7851, cost: 193.54, currency: "USD" }
     ];
 
-    const QUOTES_KEY = "personal-pnl-quotes-v3";
+    const QUOTES_KEY = "personal-pnl-quotes-v4";
     const HISTORY_KEY = "personal-pnl-history-v3";
 
     // Public dashboard: holdings are read-only and always come from this source file.
@@ -1264,6 +1264,26 @@
 
     function getQuotePrice(sym) {
       return Number(quotes[sym]?.price);
+    }
+
+    function getQuotePreviousClose(sym) {
+      const previousClose = quotes[sym]?.previousClose;
+      if (previousClose === null || previousClose === undefined || previousClose === "") return NaN;
+      return Number(previousClose);
+    }
+
+    function getPreviousPortfolioValueTwd(currentExchange) {
+      const previousExchange = getQuotePreviousClose("USDTWD=X");
+      const fx = Number.isFinite(previousExchange) ? previousExchange : currentExchange;
+      let total = 0;
+
+      for (const holding of holdings) {
+        const previousClose = getQuotePreviousClose(holding.symbol);
+        if (!Number.isFinite(previousClose)) return NaN;
+        total += holding.shares * previousClose * (holding.market === "US" ? fx : 1);
+      }
+
+      return total;
     }
 
     // costBasis allows transaction fees to be included while preserving the displayed average price.
@@ -1549,21 +1569,18 @@
         el("totalValueSub").textContent = `計價幣別: ${activeCurrency}`;
       }
 
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      const todaySnapshots = history.filter(point => point.time >= startOfToday.getTime());
       const todayChange = el("todayChange");
       const todayChangeSub = el("todayChangeSub");
-      if (todaySnapshots.length >= 2 && totalValueTwd > 0) {
-        const baseline = todaySnapshots[0].value * multCurr;
-        const change = displayTotalValue - baseline;
+      const previousPortfolioValueTwd = getPreviousPortfolioValueTwd(exchange);
+      if (Number.isFinite(previousPortfolioValueTwd) && totalValueTwd > 0) {
+        const change = (totalValueTwd - previousPortfolioValueTwd) * multCurr;
         todayChange.textContent = (change >= 0 ? "+" : "") + fmtNumber(change);
         todayChange.className = "card-value " + (change >= 0 ? "up" : "down");
-        todayChangeSub.textContent = "與今日首筆快照相比";
+        todayChangeSub.textContent = "與前一交易日收盤相比";
       } else {
         todayChange.textContent = "—";
         todayChange.className = "card-value";
-        todayChangeSub.textContent = "累積兩筆今日快照後顯示";
+        todayChangeSub.textContent = "等待前一交易日收盤資料";
       }
 
       // Update Allocation Donut Chart
@@ -1686,7 +1703,7 @@
       statusText.textContent = "即時連線更新中...";
 
       try {
-        const response = await fetch(WORKER_URL + "/quotes");
+        const response = await fetch(WORKER_URL + "/quotes?schema=3");
         const result = await response.json();
 
         if (!response.ok || !result.data?.length) {
