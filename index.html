@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
+      color-scheme: dark;
       --bg: #070a12;
       --bg-radial: radial-gradient(circle at 86% 0%, rgba(59, 130, 246, 0.16) 0%, transparent 32%),
         radial-gradient(circle at 8% 58%, rgba(99, 102, 241, 0.11) 0%, transparent 30%),
@@ -71,6 +72,30 @@
       min-height: 100vh;
       padding-bottom: 50px;
       overflow-x: hidden;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 1000;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--text);
+      color: var(--bg);
+      font-weight: 700;
+      transform: translateY(-160%);
+      transition: transform 0.2s ease;
+    }
+
+    .skip-link:focus-visible { transform: translateY(0); }
+
+    button,
+    input { touch-action: manipulation; }
+
+    :where(button, input):focus-visible {
+      outline: 2px solid var(--accent-cyan);
+      outline-offset: 3px;
     }
 
     .wrap {
@@ -228,7 +253,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
       backdrop-filter: blur(12px);
     }
 
@@ -285,7 +310,7 @@
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
     }
 
     .toggle-opt.active {
@@ -479,7 +504,7 @@
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
     }
 
     .time-tab.active {
@@ -756,16 +781,14 @@
       padding: 8px 14px 8px 36px;
       color: var(--text);
       font-family: var(--font-main);
-      font-size: 13px;
+      font-size: 16px;
       width: 200px;
-      transition: all 0.2s;
+      transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
     }
 
     .search-input:focus {
-      outline: none;
       border-color: var(--accent-cyan);
       box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
-      width: 240px;
     }
 
     .search-icon {
@@ -795,7 +818,7 @@
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
     }
 
     .filter-chip.active {
@@ -974,10 +997,17 @@
       }
 
       .chart-x-axis { font-size: 9px; }
+
+      .btn,
+      .toggle-opt,
+      .time-tab,
+      .filter-chip,
+      .search-input { min-height: 44px; }
     }
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">跳至主要內容</a>
   <div class="wrap">
     <!-- Header -->
     <header class="hero">
@@ -1018,6 +1048,7 @@
       </div>
     </header>
 
+    <main id="main-content">
     <!-- KPI Summary Grid -->
     <section class="summary-grid">
       <!-- Main Total PnL Card -->
@@ -1161,8 +1192,8 @@
         <div class="search-filter-bar">
           <!-- Search Box -->
           <div class="search-box">
-            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="searchInput" class="search-input" placeholder="搜尋標的或名稱..." oninput="renderTable()">
+            <svg class="search-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" id="searchInput" name="holding-search" class="search-input" placeholder="搜尋標的或名稱…" aria-label="搜尋持倉標的或名稱" autocomplete="off" spellcheck="false" oninput="renderTable()">
           </div>
 
           <!-- Market Filter Chips -->
@@ -1197,6 +1228,7 @@
         </table>
       </div>
     </section>
+    </main>
 
     <!-- Disclaimer Banner -->
     <div class="disclaimer-banner">
