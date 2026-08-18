@@ -4,7 +4,7 @@ const YAHOO_ORIGIN = "https://query1.finance.yahoo.com";
 const QUOTES = [
   { symbol: "2327.TW", currency: "TWD" },
   { symbol: "0050.TW", currency: "TWD" },
-  { symbol: "NVDA", currency: "USD" },
+  { symbol: "2449.TW", currency: "TWD" },
   { symbol: "USDTWD=X", currency: "TWD" },
 ];
 
