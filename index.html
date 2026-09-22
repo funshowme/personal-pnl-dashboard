@@ -1246,12 +1246,12 @@
     // Configuration & Constants
     const WORKER_URL = "https://personal-pnl-finmind.seanchiu1108.workers.dev";
     const DEFAULT_HOLDINGS = [
-      { market: "TW", symbol: "2327.TW", display: "2327", name: "國巨", shares: 12, cost: 930.33, currency: "TWD" },
-      { market: "TW", symbol: "0050.TW", display: "0050", name: "元大台灣50", shares: 40, cost: 101.46, costBasis: 4062, currency: "TWD" },
-      { market: "TW", symbol: "2449.TW", display: "2449", name: "京元電子", shares: 20, cost: 249.5, currency: "TWD" }
+      { market: "TW", symbol: "0050.TW", display: "0050", name: "元大台灣50", shares: 48, cost: 102.96, costBasis: 4942, currency: "TWD" },
+      { market: "TW", symbol: "2449.TW", display: "2449", name: "京元電子", shares: 20, cost: 249.5, currency: "TWD" },
+      { market: "TW", symbol: "5439.TWO", display: "5439", name: "高技", shares: 27, cost: 252, currency: "TWD" }
     ];
 
-    const QUOTES_KEY = "personal-pnl-quotes-v5";
+    const QUOTES_KEY = "personal-pnl-quotes-v6";
     const HISTORY_KEY = "personal-pnl-history-v3";
 
     // Public dashboard: holdings are read-only and always come from this source file.
@@ -1735,7 +1735,7 @@
       statusText.textContent = "即時連線更新中...";
 
       try {
-        const response = await fetch(WORKER_URL + "/quotes?schema=4");
+        const response = await fetch(WORKER_URL + "/quotes?schema=5");
         const result = await response.json();
 
         if (!response.ok || !result.data?.length) {

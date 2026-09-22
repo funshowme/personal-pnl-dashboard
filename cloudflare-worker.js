@@ -2,9 +2,9 @@ const ALLOWED_ORIGIN = "https://funshowme.github.io";
 const CACHE_SECONDS = 60;
 const YAHOO_ORIGIN = "https://query1.finance.yahoo.com";
 const QUOTES = [
-  { symbol: "2327.TW", currency: "TWD" },
   { symbol: "0050.TW", currency: "TWD" },
   { symbol: "2449.TW", currency: "TWD" },
+  { symbol: "5439.TWO", currency: "TWD" },
   { symbol: "USDTWD=X", currency: "TWD" },
 ];
 
