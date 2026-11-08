@@ -1252,7 +1252,9 @@
     ];
 
     const QUOTES_KEY = "personal-pnl-quotes-v6";
-    const HISTORY_KEY = "personal-pnl-history-v3";
+    // v4 starts a clean history: v3 could contain snapshots taken from stale cached quotes.
+    const HISTORY_KEY = "personal-pnl-history-v4";
+    localStorage.removeItem("personal-pnl-history-v3");
 
     // Public dashboard: holdings are read-only and always come from this source file.
     // Quote cache and chart snapshots remain local to improve loading and chart continuity.
@@ -1260,6 +1262,8 @@
     let quotes = JSON.parse(localStorage.getItem(QUOTES_KEY) || "{}");
     let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
     let prevQuotes = {};
+    // Symbols whose price came from a successful fetch in this page session.
+    let liveSymbols = new Set();
     let activeCurrency = "TWD";
     let activeFilter = "ALL";
     let chartRange = "ALL";
@@ -1376,17 +1380,23 @@
     }
 
     // Snapshot Net Worth History
+    // One point per clock hour: within the same hour the last point is replaced,
+    // so the chart always ends at the current portfolio value.
     function snapshot(value) {
+      const HOUR = 3600000;
+      const now = Date.now();
       const last = history.at(-1);
-      if (!last || Date.now() - last.time > 3600000) { // 1 hour interval
-        history = [...history, { time: Date.now(), value }].slice(-720);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-      }
+      const sameHour = last && Math.floor(last.time / HOUR) === Math.floor(now / HOUR);
+      if (sameHour && last.value === value) return;
+      const point = { time: now, value };
+      history = sameHour ? [...history.slice(0, -1), point] : [...history, point].slice(-720);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     }
 
-    // The chart DOM is only rebuilt when a new hourly snapshot is added.
-    // This prevents the hover marker from flashing or resetting on each quote refresh.
+    // The chart DOM is only rebuilt when the snapshot history changes.
+    // The last hover position is replayed after a rebuild so the tooltip stays put.
     let chartHistorySignature = null;
+    let lastChartHover = null;
 
     // High Precision SVG Chart Renderer
     function drawChart() {
@@ -1511,6 +1521,7 @@
       const crosshair = el("chartCrosshair");
 
       box.onmousemove = (e) => {
+        lastChartHover = { clientX: e.clientX };
         const rect = svg.getBoundingClientRect();
         const mouseX = ((e.clientX - rect.left) / rect.width) * viewWidth;
         
@@ -1545,10 +1556,13 @@
       };
 
       box.onmouseleave = () => {
+        lastChartHover = null;
         tooltip.style.opacity = "0";
         crosshair.style.opacity = "0";
         dot.setAttribute("cx", "-10");
       };
+
+      if (lastChartHover && box.matches(":hover")) box.onmousemove(lastChartHover);
     }
 
     // Main Render Pipeline
@@ -1632,7 +1646,11 @@
       el("donutUs").style.strokeDasharray = `${usDash} ${circ}`;
       el("donutUs").style.strokeDashoffset = `-${twDash}`;
 
-      if (totalValueTwd > 0) snapshot(totalValueTwd);
+      // Only record a snapshot once every price comes from this page's latest fetch,
+      // never from the cached quotes used for the first paint.
+      const needsFx = holdings.some(h => h.market === "US");
+      const hasLivePrices = holdings.every(h => liveSymbols.has(h.symbol)) && (!needsFx || liveSymbols.has("USDTWD=X"));
+      if (hasLivePrices && totalValueTwd > 0) snapshot(totalValueTwd);
 
       drawChart();
       renderTable();
@@ -1746,6 +1764,7 @@
         result.data.forEach(item => {
           quotes[item.symbol] = item;
         });
+        liveSymbols = new Set(result.data.map(item => item.symbol));
 
         localStorage.setItem(QUOTES_KEY, JSON.stringify(quotes));
 
